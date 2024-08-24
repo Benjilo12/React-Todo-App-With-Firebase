@@ -6,7 +6,10 @@ import {
   query,
   collection,
   onSnapshot,
-  querySnapshot,
+  updateDoc,
+  doc,
+  addDoc,
+  deleteDoc,
 } from "firebase/firestore";
 
 const style = {
@@ -20,7 +23,23 @@ const style = {
 
 function App() {
   const [todos, setTodos] = useState([]);
+  const [input, setInput] = useState("");
+  console.log(input);
   //Create todo
+  const createTodo = async (e) => {
+    e.preventDefault();
+    if (input === "") {
+      alert("please enter a valid todo");
+      return;
+    }
+    await addDoc(collection(db, "todos"), {
+      text: input,
+      completed: false,
+    });
+    setInput("");
+  };
+
+  //Read todo
   useEffect(() => {
     const q = query(collection(db, "todos"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -32,23 +51,48 @@ function App() {
     });
     return () => unsubscribe();
   }, []);
-  //Read todo from firebase
+  //Update todo from firebase
+  const toggleComplete = async (todo) => {
+    await updateDoc(doc(db, "todos", todo.id), {
+      completed: !todo.completed,
+    });
+  };
+
+  //Delete todo
+  const deleteTodo = async (id) => {
+    await deleteDoc(doc(db, "todos", id));
+  };
   return (
     <div className="h-screen w-screen p-4 bg-gradient-to-r from-[#2F80ED] to-[#1CB5E0]">
       <div className={style.container}>
         <h3 className={style.heading}>Todo App</h3>
-        <form className={style.form}>
-          <input className={style.input} type="text" placeholder="Add Todo" />
+        <form className={style.form} onSubmit={createTodo}>
+          <input
+            className={style.input}
+            value={input}
+            type="text"
+            placeholder="Add Todo"
+            onChange={(e) => setInput(e.target.value)}
+          />
           <button className={style.button}>
             <AiOutlinePlus size={30} />
           </button>
         </form>
         <ul>
           {todos.map((todo, index) => (
-            <Todo key={index} todo={todo} />
+            <Todo
+              key={index}
+              todo={todo}
+              toggleComplete={toggleComplete}
+              deleteTodo={deleteTodo}
+            />
           ))}
         </ul>
-        <p className={style.count}>You have 2 todos</p>
+        {todos.length < 1 ? (
+          <p className={style.count}>you have no todos</p>
+        ) : (
+          <p className={style.count}>{`You have ${todos.length} todos`}</p>
+        )}
       </div>
     </div>
   );
